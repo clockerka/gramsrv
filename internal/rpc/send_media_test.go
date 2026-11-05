@@ -581,7 +581,12 @@ func fakeAvatarStaticSizes() []domain.PhotoSize {
 func (f *fakeFiles) CreateDocumentFromUpload(_ context.Context, _ domain.UploadedFileRef, spec domain.DocumentSpec) (domain.Document, error) {
 	f.createUploadCalls++
 	f.lastDocumentSpec = spec
-	return domain.Document{ID: 888, AccessHash: 8, DCID: 2, MimeType: spec.MimeType, Attributes: spec.Attributes}, nil
+	doc := domain.Document{ID: 888, AccessHash: 8, DCID: 2, MimeType: spec.MimeType, Attributes: spec.Attributes}
+	if f.docs == nil {
+		f.docs = map[int64]domain.Document{}
+	}
+	f.docs[doc.ID] = doc
+	return doc, nil
 }
 func (f *fakeFiles) CreateDocumentFromBytes(_ context.Context, data []byte, spec domain.DocumentSpec) (domain.Document, error) {
 	f.lastDocumentSpec = spec

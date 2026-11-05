@@ -182,7 +182,7 @@ func (r *Router) onChannelsUpdateEmojiStatus(ctx context.Context, req *tg.Channe
 	if err != nil {
 		return nil, err
 	}
-	status, err := domainChannelEmojiStatus(req.EmojiStatus)
+	status, err := r.domainChannelEmojiStatus(ctx, viewerUserID, view.Channel.ID, req.EmojiStatus)
 	if err != nil {
 		return nil, err
 	}
@@ -563,7 +563,7 @@ func domainPeerColorFromChannelUpdate(req *tg.ChannelsUpdateColorRequest) domain
 	return out
 }
 
-func domainChannelEmojiStatus(status tg.EmojiStatusClass) (domain.ChannelEmojiStatus, error) {
+func (r *Router) domainChannelEmojiStatus(ctx context.Context, viewerUserID, channelID int64, status tg.EmojiStatusClass) (domain.ChannelEmojiStatus, error) {
 	switch s := status.(type) {
 	case *tg.EmojiStatusEmpty:
 		return domain.ChannelEmojiStatus{}, nil
@@ -576,17 +576,83 @@ func domainChannelEmojiStatus(status tg.EmojiStatusClass) (domain.ChannelEmojiSt
 			return domain.ChannelEmojiStatus{}, tgerr400("EMOJI_STATUS_INVALID")
 		}
 		return domain.ChannelEmojiStatus{DocumentID: s.DocumentID, Until: until}, nil
-	case *tg.EmojiStatusCollectible:
-		if s.DocumentID <= 0 {
-			return domain.ChannelEmojiStatus{}, tgerr400("EMOJI_STATUS_INVALID")
+	case *tg.InputEmojiStatusCollectible:
+		if r.deps.Gifts == nil || s.CollectibleID <= 0 {
+			return domain.ChannelEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
+		}
+		gift, found, err := r.deps.Gifts.UniqueByID(ctx, s.CollectibleID)
+		if err != nil {
+			return domain.ChannelEmojiStatus{}, internalErr()
+		}
+		userOwner := domain.Peer{Type: domain.PeerTypeUser, ID: viewerUserID}
+		channelOwner := domain.Peer{Type: domain.PeerTypeChannel, ID: channelID}
+		if !found || (gift.Owner != userOwner && gift.Owner != channelOwner) || gift.Burned || gift.OwnerAddress != "" {
+			return domain.ChannelEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
+		}
+		collectible, valid := domain.CollectibleEmojiStatus(gift)
+		if !valid {
+			return domain.ChannelEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
 		}
 		until, _ := s.GetUntil()
 		if until < 0 {
 			return domain.ChannelEmojiStatus{}, tgerr400("EMOJI_STATUS_INVALID")
 		}
-		return domain.ChannelEmojiStatus{DocumentID: s.DocumentID, Until: until}, nil
-	case *tg.InputEmojiStatusCollectible:
-		return domain.ChannelEmojiStatus{}, tgerr400("EMOJI_STATUS_INVALID")
+		return domain.ChannelEmojiStatus{
+			DocumentID:  collectible.DocumentID,
+			Until:       until,
+			Collectible: collectible,
+		}, nil
+	case *tg.EmojiStatusCollectible:
+		if s.CollectibleID <= 0 {
+			if s.DocumentID <= 0 {
+				return domain.ChannelEmojiStatus{}, tgerr400("EMOJI_STATUS_INVALID")
+			}
+			until, _ := s.GetUntil()
+			if until < 0 {
+				return domain.ChannelEmojiStatus{}, tgerr400("EMOJI_STATUS_INVALID")
+			}
+			return domain.ChannelEmojiStatus{DocumentID: s.DocumentID, Until: until}, nil
+		}
+		if r.deps.Gifts != nil {
+			gift, found, err := r.deps.Gifts.UniqueByID(ctx, s.CollectibleID)
+			if err == nil && found {
+				userOwner := domain.Peer{Type: domain.PeerTypeUser, ID: viewerUserID}
+				channelOwner := domain.Peer{Type: domain.PeerTypeChannel, ID: channelID}
+				if (gift.Owner == userOwner || gift.Owner == channelOwner) && !gift.Burned && gift.OwnerAddress == "" {
+					if collectible, valid := domain.CollectibleEmojiStatus(gift); valid {
+						until, _ := s.GetUntil()
+						return domain.ChannelEmojiStatus{
+							DocumentID:  collectible.DocumentID,
+							Until:       until,
+							Collectible: collectible,
+						}, nil
+					}
+				}
+			}
+		}
+		collectible := domain.EmojiStatusCollectible{
+			CollectibleID:     s.CollectibleID,
+			Title:             s.Title,
+			Slug:              s.Slug,
+			DocumentID:        s.DocumentID,
+			PatternDocumentID: s.PatternDocumentID,
+			CenterColor:       s.CenterColor,
+			EdgeColor:         s.EdgeColor,
+			PatternColor:      s.PatternColor,
+			TextColor:         s.TextColor,
+		}
+		if !collectible.Valid() {
+			return domain.ChannelEmojiStatus{}, tgerr400("COLLECTIBLE_INVALID")
+		}
+		until, _ := s.GetUntil()
+		if until < 0 {
+			return domain.ChannelEmojiStatus{}, tgerr400("EMOJI_STATUS_INVALID")
+		}
+		return domain.ChannelEmojiStatus{
+			DocumentID:  s.DocumentID,
+			Until:       until,
+			Collectible: collectible,
+		}, nil
 	default:
 		return domain.ChannelEmojiStatus{}, tgerr400("EMOJI_STATUS_INVALID")
 	}

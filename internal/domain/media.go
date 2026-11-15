@@ -107,10 +107,14 @@ type UploadedMediaReceipt struct {
 
 // DocumentSpec describes the metadata for creating a Document from an uploaded file (from InputMediaUploadedDocument).
 type DocumentSpec struct {
-	MimeType   string
-	Attributes []DocumentAttribute
-	Thumb      *UploadedFileRef // optional thumbnail upload, produces doc:<id>:m
-	ForceFile  bool
+	// GenerateImageThumbnail validates an uploaded image, records its real dimensions,
+	// and stores a thumbnail required by wallpaper clients. Omit false from intent
+	// hashing so receipts created before this option remain replayable.
+	GenerateImageThumbnail bool `json:",omitempty"`
+	MimeType               string
+	Attributes             []DocumentAttribute
+	Thumb                  *UploadedFileRef // optional thumbnail upload, produces doc:<id>:m
+	ForceFile              bool
 	// NosoundVideo corresponds to inputMediaUploadedDocument.nosound_video. A real GIF is still
 	// converted to MP4, but when this flag is present it is persisted as an ordinary soundless video without the animated attribute (album path).
 	NosoundVideo bool

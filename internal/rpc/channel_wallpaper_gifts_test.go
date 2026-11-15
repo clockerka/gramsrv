@@ -28,6 +28,9 @@ func TestAccountUploadWallPaperAndGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("onAccountUploadWallPaper failed: %v", err)
 	}
+	if !files.lastDocumentSpec.GenerateImageThumbnail || !files.lastDocumentSpec.ForceFile {
+		t.Fatal("wallpaper upload must request an image thumbnail and preserve image bytes")
+	}
 	wp, ok := res.(*tg.WallPaper)
 	if !ok {
 		t.Fatalf("upload wallpaper result = %T, want *tg.WallPaper", res)

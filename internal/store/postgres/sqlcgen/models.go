@@ -733,6 +733,8 @@ type Channel struct {
 	Fake                          bool
 	Gigagroup                     bool
 	SignatureProfiles             bool
+	EmojiStatusCollectibleID      *int64
+	EmojiStatusCollectible        []byte
 }
 
 type ChannelAdminLogEvent struct {
@@ -3333,6 +3335,7 @@ type User struct {
 	Scam                          bool
 	Fake                          bool
 	PremiumUpdatedAt              pgtype.Timestamptz
+	CustomLabel                   string
 }
 
 type UserBusinessProfile struct {

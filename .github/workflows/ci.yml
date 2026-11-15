@@ -53,6 +53,9 @@ jobs:
       - name: Download Go modules
         run: go mod download
 
+      - name: Check reachable Go vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
       - name: Test
         run: go test ./... -count=1
 
@@ -70,6 +73,11 @@ jobs:
         env:
           TELESRV_TEST_POSTGRES_DSN: postgres://inventory:inventory-test@127.0.0.1:5432/gift_inventory_test?sslmode=disable
         run: go test ./cmd/telesrv-admin -run '^(TestOperatorCommand|TestOperatorCreateRoute|TestOperatorUniqueness|TestNamedOperator|TestDemotion|TestAuditTrail)' -count=1 -timeout=5m
+
+      - name: Verify imported profile field migration against PostgreSQL
+        env:
+          TELESRV_TEST_POSTGRES_DSN: postgres://inventory:inventory-test@127.0.0.1:5432/gift_inventory_test?sslmode=disable
+        run: go test ./internal/store/postgres -run '^TestReconcileImportedProfileFieldsPostgres$' -count=1 -timeout=3m
 
       - name: Verify fact-check persistence and visibility against PostgreSQL
         env:

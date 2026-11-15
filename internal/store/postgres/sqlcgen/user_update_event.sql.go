@@ -392,9 +392,10 @@ type BatchListDispatchEventsRow struct {
 	ReplyUserEmojiStatusUntil      int64
 }
 
-// Fetch account events in bulk precisely by (user_id, pts), so the outbox worker can load the details
-// of a batch of claimed events at once, replacing per-item ListUserUpdateEventsAfter. The columns match
-// ListUserUpdateEventsAfter exactly to reuse the conversion logic.
+// Fetch account events in exact bulk by (user_id, pts) so the outbox worker can load
+// the event details of a batch of claims at once, replacing per-row
+// ListUserUpdateEventsAfter. The columns match ListUserUpdateEventsAfter exactly to
+// reuse the conversion logic.
 func (q *Queries) BatchListDispatchEvents(ctx context.Context, arg BatchListDispatchEventsParams) ([]BatchListDispatchEventsRow, error) {
 	rows, err := q.db.Query(ctx, batchListDispatchEvents, arg.UserIds, arg.PtsList)
 	if err != nil {
@@ -589,9 +590,9 @@ type ClaimDispatchOutboxRow struct {
 	Attempts         int32
 }
 
-// The durable head table keeps only one row per user and keeps the head's readiness in sync. A claim
-// locks the lane head first and then updates the corresponding outbox row, so it neither scans the
-// backlog nor claims the same user concurrently.
+// The durable head table keeps exactly one row per user and keeps the head's
+// readiness in sync. Claim locks the lane head first, then updates the corresponding
+// outbox row, so it neither scans the backlog nor concurrently claims the same user.
 func (q *Queries) ClaimDispatchOutbox(ctx context.Context, arg ClaimDispatchOutboxParams) ([]ClaimDispatchOutboxRow, error) {
 	rows, err := q.db.Query(ctx, claimDispatchOutbox, arg.LeaseSeconds, arg.LimitCount)
 	if err != nil {
@@ -624,8 +625,8 @@ const claimDispatchOutboxShards = `-- name: ClaimDispatchOutboxShards :many
 WITH picked_heads AS (
   SELECT h.target_user_id, h.head_id
   FROM dispatch_outbox_user_heads h
-  -- 256 is the same schema constant as store.DispatchOutboxLogicalShards and the 0069 generated
-  -- column; it must not vary with the worker count.
+  -- 256 is the same schema constant as store.DispatchOutboxLogicalShards and the
+  -- 0069 generated column; it must not change with the worker count.
   WHERE h.logical_shard = ANY($1::smallint[])
     AND (
       (
@@ -675,8 +676,9 @@ type ClaimDispatchOutboxShardsRow struct {
 	Attempts         int32
 }
 
-// The fixed logical shard is determined by target_user_id; at runtime a worker claims only the shard
-// set assigned to it, so the same user always has a single serial lane while different users can run in parallel.
+// The fixed logical shard is determined by target_user_id; at runtime a worker
+// claims only the shard set assigned to it, so the same user always has exactly one
+// serial lane while different users can proceed in parallel.
 func (q *Queries) ClaimDispatchOutboxShards(ctx context.Context, arg ClaimDispatchOutboxShardsParams) ([]ClaimDispatchOutboxShardsRow, error) {
 	rows, err := q.db.Query(ctx, claimDispatchOutboxShards, arg.ShardIds, arg.LeaseSeconds, arg.LimitCount)
 	if err != nil {
@@ -733,10 +735,10 @@ type DeleteFailedDispatchOutboxParams struct {
 	LimitCount       int32
 }
 
-// A failed row can only become a lane head; starting from the head table and locking the head first
-// both goes through 0074's small index and keeps the same user_heads->outbox lock order as
-// claim/completion. Only the online task is deleted; the durable user_update_events are untouched, so
-// clients can still recover via difference.
+// failed can only be a lane head; starting from the head table and locking the head
+// first both uses 0074's small index and keeps the same user_heads -> outbox lock
+// order as claim/completion. Only the online task is deleted; durable
+// user_update_events is untouched, so clients can still recover via difference.
 func (q *Queries) DeleteFailedDispatchOutbox(ctx context.Context, arg DeleteFailedDispatchOutboxParams) (int32, error) {
 	row := q.db.QueryRow(ctx, deleteFailedDispatchOutbox, arg.OlderThanSeconds, arg.TargetUserIds, arg.LimitCount)
 	var deleted_count int32
@@ -1226,11 +1228,12 @@ type MarkDispatchDeliveredParams struct {
 	TargetUserID     int64
 }
 
-// Option A: delete on successful delivery. The outbox is a task queue, and delivered rows have no
-// retention value (messages live in message_boxes, offline compensation in user_update_events), so
-// deleting keeps the table in a small steady state of "unfinished tasks". The claim lock order is
-// user_heads->outbox; completion must first explicitly lock the same head and then delete the outbox
-// row, otherwise a lease-expired claim racing with completion forms an outbox->head / head->outbox cycle.
+// Option A: delete immediately on successful delivery. The outbox is a task queue and
+// delivered rows have no retention value (messages are in message_boxes, offline
+// catch-up in user_update_events); deleting keeps the table at a small steady state of
+// "unfinished tasks". Claim's lock order is user_heads -> outbox; completion must
+// first explicitly lock the same head and then delete the outbox row, otherwise a
+// racing expired-lease claim and completion can form an outbox -> head / head -> outbox cycle.
 func (q *Queries) MarkDispatchDelivered(ctx context.Context, arg MarkDispatchDeliveredParams) (int64, error) {
 	result, err := q.db.Exec(ctx, markDispatchDelivered, arg.ID, arg.ExpectedAttempts, arg.TargetUserID)
 	if err != nil {
@@ -1271,7 +1274,7 @@ type MarkDispatchDeliveredBatchParams struct {
 	ExpectedAttempts []int32
 }
 
-// Delete a batch of delivered (target_user_id, id) rows in bulk; target_user_id in the WHERE clause hits the unique index and avoids cross-deletion.
+// Bulk-delete a batch of delivered (target_user_id, id); target_user_id goes into the WHERE clause to hit the unique index and avoid cross-user deletes.
 func (q *Queries) MarkDispatchDeliveredBatch(ctx context.Context, arg MarkDispatchDeliveredBatchParams) (int64, error) {
 	result, err := q.db.Exec(ctx, markDispatchDeliveredBatch, arg.TargetUserIds, arg.Ids, arg.ExpectedAttempts)
 	if err != nil {

@@ -1969,6 +1969,7 @@ func run(logger *zap.Logger) error {
 		Privacy:              privacyService,
 		Help: help.NewService(helpStore, helpStore,
 			help.WithMapboxToken(cfg.MapboxToken),
+			help.WithAccountUsers(userStore),
 			help.WithPremiumBotUsername(cfg.PremiumBotUsername),
 			// The wallet requires an explicit state directory; an empty directory is how an
 			// operator turns it off, and that is exactly when a client must be told
@@ -2279,7 +2280,7 @@ func run(logger *zap.Logger) error {
 			}(chain.Key, chainLog)
 		}
 	}
-	if _, err := botapi.Start(ctx, cfg.BotAPIAddr, botsService, usersService, router, router, router, logger.Named("botapi")); err != nil {
+	if _, err := botapi.Start(ctx, cfg.BotAPIAddr, botsService, usersService, router, router, router, logger.Named("botapi"), botapi.WithPrivateWebhookNetworks(cfg.BotAPIWebhookAllowPrivateNetworks)); err != nil {
 		return fmt.Errorf("start bot api: %w", err)
 	}
 	// Scoped tokens carry a bounded permission set; the master token stays

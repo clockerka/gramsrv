@@ -167,7 +167,7 @@ func (q *Queries) InsertBot(ctx context.Context, arg InsertBotParams) error {
 const insertBotUser = `-- name: InsertBotUser :one
 INSERT INTO users (access_hash, phone, first_name, last_name, username, country_code, is_bot, bot_info_version)
 VALUES ($1, '', $2, '', $3, '', TRUE, 1)
-RETURNING id, access_hash, phone, first_name, last_name, username, country_code, created_at, updated_at, verified, support, about, last_seen_at, default_history_ttl_period, is_bot, bot_info_version, premium_expires_at, emoji_status_document_id, emoji_status_until, color_set, color, color_background_emoji_id, profile_color_set, profile_color, profile_color_background_emoji_id, birthday_day, birthday_month, birthday_year, personal_channel_id, deleted_at, deletion_source, deletion_reason, account_delete_at, emoji_status_collectible_id, emoji_status_collectible, linked_community_id, scam, fake, premium_updated_at
+RETURNING id, access_hash, phone, first_name, last_name, username, country_code, created_at, updated_at, verified, support, about, last_seen_at, default_history_ttl_period, is_bot, bot_info_version, premium_expires_at, emoji_status_document_id, emoji_status_until, color_set, color, color_background_emoji_id, profile_color_set, profile_color, profile_color_background_emoji_id, birthday_day, birthday_month, birthday_year, personal_channel_id, deleted_at, deletion_source, deletion_reason, account_delete_at, emoji_status_collectible_id, emoji_status_collectible, linked_community_id, scam, fake, premium_updated_at, custom_label
 `
 
 type InsertBotUserParams struct {
@@ -219,6 +219,7 @@ func (q *Queries) InsertBotUser(ctx context.Context, arg InsertBotUserParams) (U
 		&i.Scam,
 		&i.Fake,
 		&i.PremiumUpdatedAt,
+		&i.CustomLabel,
 	)
 	return i, err
 }
@@ -227,8 +228,9 @@ const listBotsByOwner = `-- name: ListBotsByOwner :many
 SELECT bot_user_id, owner_user_id, token_secret, description, commands, bot_chat_history, bot_nochats, inline_placeholder, created_at, updated_at, menu_button_type, menu_button_text, menu_button_url, bot_inline_geo FROM bots WHERE owner_user_id = $1 AND bot_user_id <> owner_user_id ORDER BY bot_user_id
 `
 
-// Exclude the self-owner seed row (owned by the built-in BotFather), consistent with the memory
-// implementation: /mybots and the creation limit count only bots created by users via /newbot.
+// Exclude the self-owner seed row (owned by the built-in BotFather), consistent
+// with the memory implementation: /mybots and the creation cap count only bots
+// users created via /newbot.
 func (q *Queries) ListBotsByOwner(ctx context.Context, ownerUserID int64) ([]Bot, error) {
 	rows, err := q.db.Query(ctx, listBotsByOwner, ownerUserID)
 	if err != nil {
@@ -407,7 +409,7 @@ type UpdateBotProfileFieldsParams struct {
 	About     *string
 }
 
-// Partially update a bot's users row (setBotInfo's name/about); a NULL parameter means leave that field untouched.
+// Partially update a bot's users row (setBotInfo's name/about); a NULL parameter means leave that field unchanged.
 func (q *Queries) UpdateBotProfileFields(ctx context.Context, arg UpdateBotProfileFieldsParams) (int32, error) {
 	row := q.db.QueryRow(ctx, updateBotProfileFields, arg.ID, arg.FirstName, arg.About)
 	var bot_info_version int32

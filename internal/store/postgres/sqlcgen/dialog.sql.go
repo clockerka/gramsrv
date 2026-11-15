@@ -135,7 +135,8 @@ type CountArchiveUnreadDialogsRow struct {
 	UnreadMessages int32
 }
 
-// Archive (folder_id=1) unread aggregate: the number of dialogs with unread messages or a manual unread mark + the total unread message count.
+// Archive (folder_id=1) unread aggregate: the count of conversations with unread or
+// manually-marked-unread plus the total unread message count.
 func (q *Queries) CountArchiveUnreadDialogs(ctx context.Context, userID int64) (CountArchiveUnreadDialogsRow, error) {
 	row := q.db.QueryRow(ctx, countArchiveUnreadDialogs, userID)
 	var i CountArchiveUnreadDialogsRow
@@ -145,7 +146,8 @@ func (q *Queries) CountArchiveUnreadDialogs(ctx context.Context, userID int64) (
 
 const deleteDialogByPeer = `-- name: DeleteDialogByPeer :exec
 WITH dropped_drafts AS (
-    -- Deleting a dialog also discards the peer's cloud draft, so an old draft does not come back to life after the peer recreates the dialog.
+    -- Deleting the conversation also discards that peer's cloud draft, so the old
+    -- draft does not come back to life after the peer recreates the conversation.
     DELETE FROM dialog_drafts dd
     WHERE dd.user_id = $1::bigint
       AND dd.peer_type = $2::text
@@ -252,8 +254,9 @@ type EditDialogPeerFoldersParams struct {
 	FolderIds []int32
 }
 
-// Clear pinned when changing folder: TDesktop's History::setFolderPointer unconditionally unpins
-// locally on archive/unarchive, and keeping the old pin server-side would drift the state back on the next getDialogs.
+// Clear pinned when switching folders: TDesktop's History::setFolderPointer
+// unconditionally unpins locally on archive/restore, and keeping the old pin
+// server-side would drift the state back on the next getDialogs.
 func (q *Queries) EditDialogPeerFolders(ctx context.Context, arg EditDialogPeerFoldersParams) error {
 	_, err := q.db.Exec(ctx, editDialogPeerFolders,
 		arg.UserID,
@@ -1099,8 +1102,10 @@ WITH base AS (
   LEFT JOIN message_boxes m ON m.owner_user_id = d.user_id AND m.box_id = d.top_message_id AND NOT m.deleted
   WHERE d.user_id = $1
     AND (
-      -- No folder_id flag is treated as the main list (folder 0): officially, archived dialogs appear
-      -- in the main list only as the dialogFolder aggregate entry, and DrKLO Android's main-list request sets no flag.
+      -- No folder_id flag is treated as the main list (folder 0): under official
+      -- semantics archived conversations appear in the main list only as a
+      -- dialogFolder aggregate entry, and DrKLO Android's main-list request sets
+      -- no flag.
       (NOT $3::boolean AND d.folder_id = 0)
       OR (
         $3::boolean
@@ -1674,8 +1679,9 @@ WITH requested AS (
   WHERE i <= cardinality($3::text[])
 ),
 deduped AS (
-  -- The first element of the request array is the top of the pinned region; uniformly encoded as
-  -- "larger value sorts first", consistent with the channel reorder, the toggle's MAX+1 allocation and the merge layer's sort direction.
+  -- The first element of the request array is the very top of the pinned area;
+  -- uniformly encoded as "larger value sorts earlier", consistent with the channel
+  -- reorder and toggle MAX+1 allocation and the merge layer's sort direction.
   SELECT DISTINCT ON (peer_type, peer_id)
     peer_type,
     peer_id,
@@ -1734,8 +1740,9 @@ type SetDialogArchivePinnedParams struct {
 	UserID int64
 }
 
-// The pin state of the archive folder row itself (toggleDialogPin(inputDialogPeerFolder)).
-// Officially the default is treated as pinned=true when no row exists, so an explicit value is always written here.
+// The pinned state of the archive folder row itself
+// (toggleDialogPin(inputDialogPeerFolder)). When no row exists the official default
+// is pinned=true, so a row with an explicit value is always written here.
 func (q *Queries) SetDialogArchivePinned(ctx context.Context, arg SetDialogArchivePinnedParams) (bool, error) {
 	row := q.db.QueryRow(ctx, setDialogArchivePinned, arg.Pinned, arg.UserID)
 	var changed bool
@@ -1775,8 +1782,9 @@ WITH target AS (
     AND d.peer_id = $3::bigint
 ),
 next_order AS (
-  -- The order space is unified across the dialogs/channel_dialogs tables (the merge layer sorts
-  -- globally by pinned_order), but the maximum is taken only within the target dialog's folder.
+  -- The order space is unified across the dialogs/channel_dialogs tables (the merge
+  -- layer sorts globally by pinned_order), but the max is taken only within the
+  -- folder the target conversation belongs to.
   SELECT GREATEST(
     COALESCE((
       SELECT MAX(d.pinned_order)
@@ -1826,8 +1834,9 @@ type SetDialogPinnedRow struct {
 	FolderID int32
 }
 
-// The pin order is allocated independently within the dialog's current folder (0 main list / 1 archive),
-// returning folder_id for updateDialogPinned.folder_id.
+// Pinned order is allocated independently within the dialog's current folder
+// (0 main list / 1 archive), and folder_id is returned for
+// updateDialogPinned.folder_id.
 func (q *Queries) SetDialogPinned(ctx context.Context, arg SetDialogPinnedParams) (SetDialogPinnedRow, error) {
 	row := q.db.QueryRow(ctx, setDialogPinned,
 		arg.UserID,
@@ -1861,8 +1870,9 @@ type SetDialogUnreadMarkParams struct {
 	PeerID   int64
 }
 
-// Value guard IS DISTINCT FROM: re-marking the same value must not count as changed, otherwise the
-// layer above records a ghost durable unread-mark event and pushes one extra update (aligned with the channel-side SetChannelDialogUnreadMark).
+// Value guard with IS DISTINCT FROM: re-marking the same value must not count as
+// changed, otherwise the caller records a ghost durable unread-mark event and pushes
+// an extra update (aligned with the channel side's SetChannelDialogUnreadMark).
 func (q *Queries) SetDialogUnreadMark(ctx context.Context, arg SetDialogUnreadMarkParams) (bool, error) {
 	row := q.db.QueryRow(ctx, setDialogUnreadMark,
 		arg.Unread,
@@ -2123,8 +2133,9 @@ type UpsertOutboxDialogParams struct {
 	TopMessageDate int32
 }
 
-// Sending a message to the dialog from the sender is treated as knowing the content: clear the manual
-// unread mark, aligned with the channel send path and readHistory clearing semantics.
+// Sending a message into the conversation counts as having seen its content: clear
+// the manual unread mark, consistent with the channel send path and readHistory
+// clearing semantics.
 func (q *Queries) UpsertOutboxDialog(ctx context.Context, arg UpsertOutboxDialogParams) error {
 	_, err := q.db.Exec(ctx, upsertOutboxDialog,
 		arg.UserID,

@@ -95,8 +95,9 @@ type CountMessagesByUserParams struct {
 	SavedReactionKeys    []string
 }
 
-// Extraction of ListMessagesByUser's total CTE: the same base filter (without the pagination anchor),
-// issued only when NeedTotalCount, so the hot path (getHistory never needs total) does not plan the count subtree every time.
+// Separation of ListMessagesByUser's total CTE: same base filter (without the
+// paging anchor), issued only when NeedTotalCount, so the hot path (getHistory,
+// which never needs total) does not plan the count subtree each time.
 func (q *Queries) CountMessagesByUser(ctx context.Context, arg CountMessagesByUserParams) (int32, error) {
 	row := q.db.QueryRow(ctx, countMessagesByUser,
 		arg.OwnerUserID,
@@ -2557,11 +2558,13 @@ type ListMessagesBackwardRow struct {
 	FromUserLastSeenAt            int64
 }
 
-// Flat static query for the backward hot path (add_offset>=0: initial load / scroll-up paging).
-// Bit-for-bit equivalent to ListMessagesByUser's backward branch (same base filter + same anchor +
-// ORDER BY box_id DESC + OFFSET GREATEST(add_offset,0) + LIMIT), but it plans only a single
-// index scan + 2 LEFT JOIN, avoiding the big CTE planning all 4 branches as a whole tree. total goes
-// through a separate CountMessagesByUser, issued only when NeedTotalCount.
+// A flat, static query for the backward hot path (add_offset>=0: initial load /
+// scroll-up paging). It is bit-for-bit equivalent to ListMessagesByUser's backward
+// branch (same base filter + same anchor + ORDER BY box_id DESC +
+// OFFSET GREATEST(add_offset,0) + LIMIT), but plans only a single index scan +
+// 2 LEFT JOINs, avoiding a big CTE that plans all four branches as a whole tree.
+// total goes through the separate CountMessagesByUser, issued only when
+// NeedTotalCount.
 func (q *Queries) ListMessagesBackward(ctx context.Context, arg ListMessagesBackwardParams) ([]ListMessagesBackwardRow, error) {
 	rows, err := q.db.Query(ctx, listMessagesBackward,
 		arg.OwnerUserID,
@@ -3667,8 +3670,8 @@ type UnpinAllMessageBoxesByPeerRow struct {
 	MessageSenderID  int64
 }
 
-// Cleared in batches (the affectedHistory.offset continuation-clearing semantics), keeping a single
-// updatePinnedMessages' messages vector bounded as a result.
+// Clear in batches (the affectedHistory.offset continue-clearing semantics), so the
+// messages vector of a single updatePinnedMessages stays bounded.
 func (q *Queries) UnpinAllMessageBoxesByPeer(ctx context.Context, arg UnpinAllMessageBoxesByPeerParams) ([]UnpinAllMessageBoxesByPeerRow, error) {
 	rows, err := q.db.Query(ctx, unpinAllMessageBoxesByPeer,
 		arg.OwnerUserID,

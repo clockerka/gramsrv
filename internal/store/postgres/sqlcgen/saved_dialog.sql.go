@@ -554,10 +554,11 @@ type ListSavedDialogTopsRow struct {
 	Pinned               bool
 }
 
-// Saved Messages sub-dialog (saved dialogs) query group.
-// A sub-dialog = self-chat box rows grouped by saved_peer; the top message is not materialized and is
-// computed on the fly by MAX(box_id) (box_id is monotonic in time, so date order matches id order),
-// and consistency after deletion/history clearing is guaranteed by the query itself.
+// Saved Messages sub-conversation (saved dialogs) query set.
+// A sub-conversation = self-chat box rows grouped by saved_peer; the top message is
+// not materialized but computed on the fly via MAX(box_id) aggregation (box_id is
+// monotonic in time, so date order and id order agree), and consistency after
+// deletion/history clearing is guaranteed by the query itself.
 func (q *Queries) ListSavedDialogTops(ctx context.Context, arg ListSavedDialogTopsParams) ([]ListSavedDialogTopsRow, error) {
 	rows, err := q.db.Query(ctx, listSavedDialogTops,
 		arg.OwnerUserID,

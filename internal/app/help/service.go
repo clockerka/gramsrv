@@ -72,7 +72,7 @@ const tdesktopClient = "tdesktop"
 //
 // WebK directly calls Array.some on fragment_prefixes while rendering user profiles,
 // so this compatibility key must always remain an array, even when it is empty.
-const tdesktopDefaultAppConfigBase = `{"chat_read_mark_expire_period":604800,"chat_read_mark_size_threshold":50,"pm_read_date_expire_period":604800,"quote_length_max":1024,"telegram_antispam_group_size_min":200,"telegram_antispam_user_id":"5434988373","fragment_prefixes":["888"],"forum_upgrade_participants_min":2,"reactions_default":{"_":"reactionEmoji","emoticon":"👍"},"reactions_uniq_max":11,"reactions_user_max_default":1,"reactions_user_max_premium":3,"reactions_in_chat_max":3,"boosts_channel_level_max":100,"rich_message_posting":"enabled","ephemeral_welcome_messages_max":5,"upload_markup_video":true,"emojies_send_dice":["🎲","🎯","🏀","⚽","⚽️","🎳","🎰"],"premium_purchase_blocked":false,"premium_gift_attach_menu_icon":true,"premium_gift_text_field_icon":true,"gift_text_length_max":128,"stars_purchase_blocked":false,"stargifts_blocked":false,"stargifts_pinned_to_top_limit":1000,"giveaway_gifts_purchase_available":true,"giveaway_boosts_per_premium":4,"giveaway_countries_max":10,"giveaway_add_peers_max":10,"giveaway_period_max":604800,"stories_stealth_future_period":1500,"stories_stealth_past_period":300,"stories_stealth_cooldown_period":10800,"quick_replies_limit":100,"quick_reply_messages_limit":20,"business_chat_links_limit":100,"dialog_filters_enabled":true,"chatlist_update_period":3600,"chatlist_invites_limit_default":3,"chatlist_invites_limit_premium":20,"chatlists_joined_limit_default":2,"chatlists_joined_limit_premium":20,"about_length_limit_default":70,"about_length_limit_premium":140,"bot_verification_description_length_limit":128,"caption_length_limit_default":1024,"caption_length_limit_premium":4096,"channels_limit_default":500,"channels_limit_premium":1000,"channels_public_limit_default":10,"channels_public_limit_premium":20,"dialog_filters_limit_default":10,"dialog_filters_limit_premium":20,"dialog_filters_chats_limit_default":100,"dialog_filters_chats_limit_premium":200,"dialogs_pinned_limit_default":5,"dialogs_pinned_limit_premium":10,"dialogs_folder_pinned_limit_default":100,"dialogs_folder_pinned_limit_premium":200,"saved_dialogs_pinned_limit_default":5,"saved_dialogs_pinned_limit_premium":100,"saved_gifs_limit_default":200,"saved_gifs_limit_premium":400,"stickers_faved_limit_default":5,"stickers_faved_limit_premium":10,"recommended_channels_limit_default":10,"recommended_channels_limit_premium":100,"aicompose_tone_examples_num":3,"aicompose_tone_title_length_max":12,"aicompose_tone_prompt_length_max":1024,"aicompose_tone_saved_limit_default":5,"aicompose_tone_saved_limit_premium":20,"upload_max_fileparts_default":4000,"upload_max_fileparts_premium":8000,"settings_display_passkeys":true,"can_edit_factcheck":true,"factcheck_length_limit":1024`
+const tdesktopDefaultAppConfigBase = `{"chat_read_mark_expire_period":604800,"chat_read_mark_size_threshold":50,"pm_read_date_expire_period":604800,"quote_length_max":1024,"telegram_antispam_group_size_min":200,"telegram_antispam_user_id":"5434988373","fragment_prefixes":["888"],"forum_upgrade_participants_min":2,"reactions_default":{"_":"reactionEmoji","emoticon":"👍"},"reactions_uniq_max":11,"reactions_user_max_default":1,"reactions_user_max_premium":3,"reactions_in_chat_max":3,"boosts_channel_level_max":100,"rich_message_posting":"enabled","ephemeral_welcome_messages_max":5,"upload_markup_video":true,"emojies_send_dice":["🎲","🎯","🏀","⚽","⚽️","🎳","🎰"],"premium_purchase_blocked":false,"premium_gift_attach_menu_icon":true,"premium_gift_text_field_icon":true,"gift_text_length_max":128,"stars_purchase_blocked":false,"stargifts_blocked":false,"stargifts_pinned_to_top_limit":6,"giveaway_gifts_purchase_available":true,"giveaway_boosts_per_premium":4,"giveaway_countries_max":10,"giveaway_add_peers_max":10,"giveaway_period_max":604800,"stories_stealth_future_period":1500,"stories_stealth_past_period":300,"stories_stealth_cooldown_period":10800,"quick_replies_limit":100,"quick_reply_messages_limit":20,"business_chat_links_limit":100,"dialog_filters_enabled":true,"chatlist_update_period":3600,"chatlist_invites_limit_default":3,"chatlist_invites_limit_premium":20,"chatlists_joined_limit_default":2,"chatlists_joined_limit_premium":20,"about_length_limit_default":70,"about_length_limit_premium":140,"bot_verification_description_length_limit":128,"caption_length_limit_default":1024,"caption_length_limit_premium":4096,"channels_limit_default":500,"channels_limit_premium":1000,"channels_public_limit_default":10,"channels_public_limit_premium":20,"dialog_filters_limit_default":10,"dialog_filters_limit_premium":20,"dialog_filters_chats_limit_default":100,"dialog_filters_chats_limit_premium":200,"dialogs_pinned_limit_default":5,"dialogs_pinned_limit_premium":10,"dialogs_folder_pinned_limit_default":100,"dialogs_folder_pinned_limit_premium":200,"saved_dialogs_pinned_limit_default":5,"saved_dialogs_pinned_limit_premium":100,"saved_gifs_limit_default":200,"saved_gifs_limit_premium":400,"stickers_faved_limit_default":5,"stickers_faved_limit_premium":10,"recommended_channels_limit_default":10,"recommended_channels_limit_premium":100,"aicompose_tone_examples_num":3,"aicompose_tone_title_length_max":12,"aicompose_tone_prompt_length_max":1024,"aicompose_tone_saved_limit_default":5,"aicompose_tone_saved_limit_premium":20,"upload_max_fileparts_default":4000,"upload_max_fileparts_premium":8000,"settings_display_passkeys":true,"can_edit_factcheck":true,"factcheck_length_limit":1024`
 const tdesktopNoForwardsAppConfig = `,"no_forwards_request_expire_period":86400`
 
 // The local ledger has no chain top-up, gasless relay or TON Connect service.
@@ -90,7 +90,7 @@ func starGiftResaleAppConfigFragment() string {
 	return `,"stars_stargift_resale_amount_min":` + strconv.FormatInt(domain.MinStarGiftResaleStars, 10)
 }
 
-const defaultAppConfigHash = 37 // must be incremented when the default app config content changes, otherwise caching clients only receive notModified.
+const defaultAppConfigHash = 38 // must be incremented when the default app config content changes, otherwise caching clients only receive notModified.
 
 // Service provides the client startup config and the country dialing-code catalog.
 //
@@ -105,6 +105,7 @@ type Service struct {
 	appConfigs              store.AppConfigStore
 	countries               store.CountryStore
 	accountFreeze           AccountFreezeProvider
+	accountUsers            AccountUserProvider
 	mapboxToken             string
 	premiumBot              string
 	walletEnabled           bool
@@ -129,6 +130,16 @@ func WithAccountFreezeProvider(provider AccountFreezeProvider) Option {
 	return func(s *Service) {
 		s.accountFreeze = provider
 	}
+}
+
+// AccountUserProvider supplies verification state for account-specific limits.
+type AccountUserProvider interface {
+	ByID(context.Context, int64) (domain.User, bool, error)
+}
+
+// WithAccountUsers keeps advertised gift limits aligned with account verification.
+func WithAccountUsers(users AccountUserProvider) Option {
+	return func(s *Service) { s.accountUsers = users }
 }
 
 // WithMapboxToken sets the Mapbox token shared by the TDesktop appConfig and the map thumbnail proxy.
@@ -238,8 +249,8 @@ func defaultAppConfigHashForPremiumBot(mapboxToken, premiumBotUsername string, w
 }
 
 // GetAppConfig returns the cached global app config plus an authenticated,
-// per-account freeze overlay. Only active freezes add account fields; an
-// inactive account receives the field-free base config. The overlay owns its
+// per-account overlay for gift pin limits and freeze state. Verification and
+// active freezes are reflected without changing the cached global config. The overlay owns its
 // own deterministic hash so a FROZEN_METHOD_INVALID-triggered refresh and a
 // later unfreeze can never be answered notModified against the other state.
 func (s *Service) GetAppConfig(ctx context.Context, userID int64, hash int) (domain.AppConfig, bool, error) {
@@ -258,6 +269,23 @@ func (s *Service) accountAppConfig(ctx context.Context, userID int64, base domai
 		return domain.AppConfig{}, fmt.Errorf("decode base app config: %w", err)
 	}
 	changed := false
+	limit := domain.MaxPinnedStarGifts
+	if userID > 0 && s != nil && s.accountUsers != nil {
+		user, found, err := s.accountUsers.ByID(ctx, userID)
+		if err != nil {
+			return domain.AppConfig{}, fmt.Errorf("load account verification: %w", err)
+		}
+		if found && user.Verified {
+			limit = domain.MaxPinnedStarGiftsVerified
+		}
+	}
+	encodedLimit := strconv.Itoa(limit)
+	// An omitted base limit already falls back to the normal client default.
+	// Preserve operator configs and their hashes unless a limit needs correcting.
+	if existing, present := values["stargifts_pinned_to_top_limit"]; (present || limit != domain.MaxPinnedStarGifts) && string(existing) != encodedLimit {
+		values["stargifts_pinned_to_top_limit"] = json.RawMessage(encodedLimit)
+		changed = true
+	}
 	for _, key := range []string{"freeze_since_date", "freeze_until_date", "freeze_appeal_url"} {
 		if _, exists := values[key]; exists {
 			delete(values, key)

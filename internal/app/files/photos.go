@@ -322,6 +322,13 @@ func (s *Service) CreateDocumentFromUpload(ctx context.Context, file domain.Uplo
 	body = s.maybeFaststartVideoBlob(ctx, spec.MimeType, body)
 	spec = s.markSilentMP4Animated(ctx, body, spec)
 	spec = s.normalizeUploadedTGS(ctx, body, spec)
+	var imageThumb []byte
+	if spec.GenerateImageThumbnail {
+		spec, imageThumb, err = s.prepareUploadedImage(ctx, body, spec)
+		if err != nil {
+			return domain.Document{}, err
+		}
+	}
 	docID := randomID()
 	if err := s.media.PutFileBlob(ctx, domain.FileBlob{
 		LocationKey: fmt.Sprintf("doc:%d", docID),
@@ -343,8 +350,15 @@ func (s *Service) CreateDocumentFromUpload(ctx context.Context, file domain.Uplo
 		DCID:          s.dc,
 		Attributes:    spec.Attributes,
 	}
+	if len(imageThumb) > 0 {
+		thumb, err := s.putDocumentThumb(ctx, docID, imageThumb)
+		if err != nil {
+			return domain.Document{}, err
+		}
+		doc.Thumbs = []domain.PhotoSize{thumb}
+	}
 	thumbMaterialized := false
-	if spec.Thumb != nil {
+	if spec.Thumb != nil && len(doc.Thumbs) == 0 {
 		thumbData, err := s.readUploadBytes(ctx, spec.Thumb.OwnerUserID, spec.Thumb.FileID, spec.Thumb.Parts)
 		if err == nil && len(thumbData) > 0 {
 			if thumb, err := s.putDocumentThumb(ctx, docID, thumbData); err == nil {

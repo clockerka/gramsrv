@@ -79,6 +79,11 @@ jobs:
           TELESRV_TEST_POSTGRES_DSN: postgres://inventory:inventory-test@127.0.0.1:5432/gift_inventory_test?sslmode=disable
         run: go test ./internal/store/postgres -run '^TestReconcileImportedProfileFieldsPostgres$' -count=1 -timeout=3m
 
+      - name: Verify uploaded channel wallpaper persistence against PostgreSQL
+        env:
+          TELESRV_TEST_POSTGRES_DSN: postgres://inventory:inventory-test@127.0.0.1:5432/gift_inventory_test?sslmode=disable
+        run: go test ./internal/rpc -run '^TestChannelUploadedWallpaperPersistsPostgres$' -count=1 -timeout=3m
+
       - name: Verify fact-check persistence and visibility against PostgreSQL
         env:
           TELESRV_TEST_POSTGRES_DSN: postgres://inventory:inventory-test@127.0.0.1:5432/gift_inventory_test?sslmode=disable

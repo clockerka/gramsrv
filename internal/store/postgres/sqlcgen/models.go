@@ -735,6 +735,7 @@ type Channel struct {
 	SignatureProfiles             bool
 	EmojiStatusCollectibleID      *int64
 	EmojiStatusCollectible        []byte
+	FakeParticipants              int32
 }
 
 type ChannelAdminLogEvent struct {

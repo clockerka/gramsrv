@@ -2353,10 +2353,11 @@ func (r *Router) onAccountUploadWallPaper(ctx context.Context, req *tg.AccountUp
 		mimeType = "image/jpeg"
 	}
 	spec := domain.DocumentSpec{
-		MimeType: mimeType,
+		MimeType:               mimeType,
+		ForceFile:              true,
+		GenerateImageThumbnail: true,
 		Attributes: []domain.DocumentAttribute{
 			{Kind: domain.DocAttrFilename, FileName: "wallpaper.jpg"},
-			{Kind: domain.DocAttrImageSize, W: 1920, H: 1080},
 		},
 	}
 	doc, err := r.deps.Files.CreateDocumentFromUpload(ctx, ref, spec)
@@ -2412,4 +2413,3 @@ func (r *Router) onAccountGetUniqueGiftChatThemes(ctx context.Context, req *tg.A
 		Users:  []tg.UserClass{},
 	}, nil
 }
-

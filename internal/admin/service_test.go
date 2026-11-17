@@ -1167,7 +1167,6 @@ func (f *fakeUsersService) SetCustomLabel(_ context.Context, userID int64, label
 	return u, nil
 }
 
-
 func (f *fakeUsersService) SetSupport(_ context.Context, userID int64, support bool) (domain.User, error) {
 	u, ok := f.users[userID]
 	if !ok {
@@ -1826,6 +1825,21 @@ func TestImportOfficialStarGiftPreservesCraftedRarityAndPublishesBundle(t *testi
 		!bytes.Equal(catalog.SourceManifestSHA256, source.bundle.ManifestSHA256) {
 		t.Fatalf("official provenance was not preserved: %+v", catalog)
 	}
+	for _, price := range []int64{0, 40, -1} {
+		req.UpgradeStars = &price
+		req.CommandID = fmt.Sprintf("override-price-%d", price)
+		_, err := svc.ImportOfficialStarGift(context.Background(), req)
+		if price < 0 {
+			if err == nil {
+				t.Fatal("negative upgrade override accepted")
+			}
+			continue
+		}
+		if err != nil || gifts.lastBundle.Collectible.UpgradeStars != price {
+			t.Fatalf("explicit upgrade price=%d stored=%d err=%v", price, gifts.lastBundle.Collectible.UpgradeStars, err)
+		}
+	}
+
 }
 
 func TestImportOfficialStarGiftAvailabilityLimitSeedsBaseSupply(t *testing.T) {

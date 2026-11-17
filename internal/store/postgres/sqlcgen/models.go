@@ -2798,6 +2798,7 @@ type StarGiftPurchaseCommand struct {
 	ChargeStars       int64
 	BalanceAfter      int64
 	CreatedAt         int32
+	IncludeUpgrade    bool
 }
 
 type StarGiftPurchaseForm struct {
